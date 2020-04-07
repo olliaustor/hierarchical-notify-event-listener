@@ -7,7 +7,6 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace HierarchicalEventListenerAppTests
 {
-/*
     [TestClass]
     public class HierarchicalEventListenerCollectionTests
     {
@@ -61,5 +60,4 @@ namespace HierarchicalEventListenerAppTests
             Assert.AreEqual(1, notificationCount, "number of notifications");
         }
     }
-*/
 }

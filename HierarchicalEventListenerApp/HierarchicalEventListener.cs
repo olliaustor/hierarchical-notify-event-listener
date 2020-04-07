@@ -61,6 +61,11 @@
             if (parent != null & propertyName != null && 
                 knownObjects.TryGetValue(parent as INotifyPropertyChanged, out KnownNotifyObject knownParent))
             {
+                if (knownParent.Properties.ContainsKey(propertyName))
+                {
+                    return;
+                }
+
                 knownParent.Properties.Add(propertyName, new KnownNotifyProperty
                 {
                     PropertyName = propertyName,
@@ -81,23 +86,28 @@
 
                 // Do not forget to subscribe to property changed event
                 notifyPropertyChanged.PropertyChanged += OnPropertyChanged;
-            }         
+            }
+
+            // Check recursively for collections to watch and add them too
+            foreach (var item in GetPropertiesOf<INotifyCollectionChanged>(notifyPropertyChanged))
+            {
+                Attach(notifyPropertyChanged, item.Item1, item.Item2);
+            }
 
             // Check recursively for properties to watch and add them too
             foreach (var item in GetPropertiesOf<INotifyPropertyChanged>(notifyPropertyChanged))
             {
                 Attach(notifyPropertyChanged, item.Item1, item.Item2);
             }
-
-            // Check recursively for collections to watch and add them too
-            foreach (var item in GetPropertiesOf<INotifyCollectionChanged>(notifyPropertyChanged))
-            {
-                //Attach(notifyPropertyChanged, item.Item1, item.Item2);
-            }
         }
 
         private void OnPropertyChanged(object sender, PropertyChangedEventArgs args)
         {
+            if (args.PropertyName.Contains("["))
+            {
+                return; // no indexer properties allowed
+            }
+
             var property = sender.GetType().GetProperty(args.PropertyName);
             if (typeof(INotifyPropertyChanged).IsAssignableFrom(property.PropertyType))                
             {
@@ -126,8 +136,6 @@
 
         public void Detach(INotifyCollectionChanged notifyCollectionChanged)
         {
-            return;
-
             if (!(notifyCollectionChanged is IEnumerable collection))
             {
                 return;
@@ -145,8 +153,6 @@
 
         private void Attach(object parent, string propertyName, INotifyCollectionChanged notifyCollectionChanged)
         {
-            return;
-
             if (!(notifyCollectionChanged is IEnumerable collection))
             {
                 return;
@@ -155,6 +161,11 @@
             if (parent != null & propertyName != null &&
                 knownObjects.TryGetValue(parent as INotifyPropertyChanged, out KnownNotifyObject knownParent))
             {
+                if (knownParent.Properties.ContainsKey(propertyName))
+                {
+                    return;
+                }
+
                 knownParent.Properties.Add(propertyName, new KnownNotifyProperty
                 {
                     PropertyName = propertyName,
@@ -187,6 +198,8 @@
                     {
                         Attach(item as INotifyCollectionChanged);
                         Attach(item as INotifyPropertyChanged);
+
+                        PropertyChanged?.Invoke(item, new PropertyChangedEventArgs("Add"));
                     }
                     break;
                 case NotifyCollectionChangedAction.Remove:
@@ -194,6 +207,8 @@
                     {
                         Detach(item as INotifyCollectionChanged);
                         Detach(item as INotifyPropertyChanged);
+
+                        PropertyChanged?.Invoke(item, new PropertyChangedEventArgs("Remove"));
                     }
                     break;
             }
@@ -205,6 +220,7 @@
             return objectToExamine.GetType()
                 .GetProperties(BindingFlags.Public | BindingFlags.Instance)
                 .Where(p => typeof(T).IsAssignableFrom(p.PropertyType))
+                .Where(p => !p.GetIndexParameters().Any()) // no indexer properties
                 .Select(p => new Tuple<string, T>(p.Name, p.GetValue(objectToExamine) as T))
                 .Where(p => p.Item2 != null);
         }

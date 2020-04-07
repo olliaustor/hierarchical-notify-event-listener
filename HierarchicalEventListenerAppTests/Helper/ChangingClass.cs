@@ -36,7 +36,7 @@
         }
         public ObservableCollection<ChangingClass> Elements
         {
-            get => Elements ?? (Elements = new ObservableCollection<ChangingClass>());
+            get => _Elements ?? (_Elements = new ObservableCollection<ChangingClass>());
             set
             {
                 _Elements = value;
