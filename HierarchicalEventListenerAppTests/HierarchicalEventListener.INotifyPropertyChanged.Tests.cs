@@ -1,6 +1,7 @@
 ﻿using System;
 using System.ComponentModel;
 using HierarchicalEventListener;
+using HierarchicalEventListenerAppTests.Helper;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace HierarchicalEventListenerAppTests
@@ -276,49 +277,5 @@ namespace HierarchicalEventListenerAppTests
             Assert.IsNotNull(receivedArgs);
         }
         #endregion
-    }
-
-    public class ChangingClass : INotifyPropertyChanged
-    {
-        private string name;
-        private ChangingClass subObject;
-
-        public ChangingClass(int id)
-        {
-            Id = id;
-        }
-
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        public int Id { get; private set; }
-
-        public string Name 
-        {             
-            get
-            {
-                return name;
-            }
-
-            set
-            {
-                name = value;
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Name)));
-            }
-                
-        }
-
-        public ChangingClass SubObject
-        {
-            get
-            {
-                return subObject;
-            }
-
-            set
-            {
-                subObject = value;
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SubObject)));
-            }
-        }
-    }
+    }  
 }

@@ -1,6 +1,7 @@
 ﻿namespace HierarchicalEventListener
 {
     using System;
+    using System.Collections;
     using System.Collections.Generic;
     using System.Collections.Specialized;
     using System.ComponentModel;
@@ -19,6 +20,7 @@
     public class HierarchicalEventListener : IHierarchicalEventListener
     {
         private readonly IDictionary<INotifyPropertyChanged, KnownNotifyObject> knownObjects = new Dictionary<INotifyPropertyChanged, KnownNotifyObject>();
+        private readonly IList<IEnumerable> knownCollections = new List<IEnumerable>();
 
         public HierarchicalEventListener()
         {
@@ -45,6 +47,7 @@
             foreach (var property in knownObject.Properties.Values)
             {
                 Detach(property.Value as INotifyPropertyChanged);
+                Detach(property.Value as INotifyCollectionChanged);
             }
         }
 
@@ -89,7 +92,7 @@
             // Check recursively for collections to watch and add them too
             foreach (var item in GetPropertiesOf<INotifyCollectionChanged>(notifyPropertyChanged))
             {
-                Attach(notifyPropertyChanged, item.Item1, item.Item2);
+                //Attach(notifyPropertyChanged, item.Item1, item.Item2);
             }
         }
 
@@ -116,19 +119,84 @@
         #endregion
 
         #region INotifyCollectionChanged        
-        public void Attach(INotifyCollectionChanged notifyCollectionChanged)
+        public void Attach(INotifyCollectionChanged collection)
         {
-
+            Attach(null, null, collection);
         }
 
         public void Detach(INotifyCollectionChanged notifyCollectionChanged)
         {
+            return;
 
+            if (!(notifyCollectionChanged is IEnumerable collection))
+            {
+                return;
+            }
+
+            knownCollections.Remove(collection);
+            notifyCollectionChanged.CollectionChanged += OnCollectionChanged;
+
+            foreach (var item in collection)
+            {
+                Detach(item as INotifyCollectionChanged);
+                Detach(item as INotifyPropertyChanged);
+            }
         }
 
         private void Attach(object parent, string propertyName, INotifyCollectionChanged notifyCollectionChanged)
         {
+            return;
 
+            if (!(notifyCollectionChanged is IEnumerable collection))
+            {
+                return;
+            }            
+
+            if (parent != null & propertyName != null &&
+                knownObjects.TryGetValue(parent as INotifyPropertyChanged, out KnownNotifyObject knownParent))
+            {
+                knownParent.Properties.Add(propertyName, new KnownNotifyProperty
+                {
+                    PropertyName = propertyName,
+                    Value = collection
+                });
+            }
+
+            // Try to find object in internal list
+            if (!knownCollections.Contains(collection))
+            {
+                knownCollections.Add(collection);
+
+                // Do not forget to subscribe to collection changed event
+                notifyCollectionChanged.CollectionChanged += OnCollectionChanged;
+            }
+
+            foreach (var item in collection)
+            {
+                Attach(item as INotifyCollectionChanged);
+                Attach(item as INotifyPropertyChanged);
+            }
+        }
+
+        private void OnCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+        {
+            switch (e.Action)
+            {
+                case NotifyCollectionChangedAction.Add:
+                    foreach (var item in e.NewItems)
+                    {
+                        Attach(item as INotifyCollectionChanged);
+                        Attach(item as INotifyPropertyChanged);
+                    }
+                    break;
+                case NotifyCollectionChangedAction.Remove:
+                    foreach (var item in e.OldItems)
+                    {
+                        Detach(item as INotifyCollectionChanged);
+                        Detach(item as INotifyPropertyChanged);
+                    }
+                    break;
+            }
         }
         #endregion
 

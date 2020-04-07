@@ -49,10 +49,12 @@
     <Reference Include="System.Core" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Helper\ChangingClass.cs" />
     <Compile Include="HierarchicalEventListener.INotifyPropertyChanged.Tests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="HierarchicalEventListener.INotifyCollectionChanged.Tests.cs" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
