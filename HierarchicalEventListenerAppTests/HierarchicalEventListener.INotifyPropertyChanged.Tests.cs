@@ -247,9 +247,29 @@ namespace HierarchicalEventListenerAppTests {
 			// the event of the listener
 			Assert.IsNotNull(receivedArgs);
 		}
-    #endregion
-    #region Tag-Problem / Object
-    [TestMethod]
+		#endregion
+
+		#region Tag-Problem / Object
+		[TestMethod]
+		public void TagElementAttached_CallPropertyChanged()
+		{
+			PropertyChangedEventArgs receivedArgs = null;
+			int notificationCount = 0;
+			listener.PropertyChanged += (sender, args) => { receivedArgs = args; notificationCount++; };
+
+			var item = new ChangingClass(1);		
+			receivedArgs = null; notificationCount = 0;
+			item.Tag = new ChangingClass(11);
+			receivedArgs = null; notificationCount = 0;
+			listener.Attach(item);
+
+			if (item.Tag is ChangingClass huhu) huhu.Name = "huhu";
+
+			Assert.IsNotNull(receivedArgs);
+			Assert.AreEqual(1, notificationCount, "number of notifications");
+		}
+
+		[TestMethod]
 		public void TagElementAttach_CallPropertyChanged() {
 			PropertyChangedEventArgs receivedArgs = null;
 			int notificationCount = 0;
@@ -266,6 +286,7 @@ namespace HierarchicalEventListenerAppTests {
 			Assert.IsNotNull(receivedArgs);
 			Assert.AreEqual(1, notificationCount, "number of notifications");
 		}
+
 		[TestMethod]
 		public void ReplaceTagElementAfterAttach_CallPropertyChanged() {
 			PropertyChangedEventArgs receivedArgs = null;

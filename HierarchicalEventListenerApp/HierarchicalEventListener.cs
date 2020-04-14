@@ -87,17 +87,18 @@
       }
 
       var property = sender.GetType().GetProperty(args.PropertyName);
-      if (typeof(INotifyPropertyChanged).IsAssignableFrom(property.PropertyType)) {
-        var value = property.GetValue(sender) as INotifyPropertyChanged;
+      var value = property.GetValue(sender);
+      if (knownObjects.TryGetValue(sender as INotifyPropertyChanged, out KnownNotifyObject knownObject) &&
+         knownObject.Properties.TryGetValue(args.PropertyName, out KnownNotifyProperty knownProperty) &&
+         value != knownProperty.Value) {
+        knownObject.Properties.Remove(args.PropertyName);
+        Detach(knownProperty.Value as INotifyPropertyChanged);
+      }
 
-        if (knownObjects.TryGetValue(sender as INotifyPropertyChanged, out KnownNotifyObject knownObject) &&
-            knownObject.Properties.TryGetValue(args.PropertyName, out KnownNotifyProperty knownProperty) &&
-            value != knownProperty.Value) {
-          knownObject.Properties.Remove(args.PropertyName);
-          Detach(knownProperty.Value as INotifyPropertyChanged);
-        }
-
-        Attach(sender, args.PropertyName, value);
+      if (value is INotifyPropertyChanged notifyPropertyChanged) {
+        Attach(sender, args.PropertyName, notifyPropertyChanged);
+      } else if (value is INotifyCollectionChanged notifyCollectionChanged) {
+        Attach(sender, args.PropertyName, notifyCollectionChanged);
       }
 
       PropertyChanged?.Invoke(sender, args);
@@ -188,9 +189,10 @@
 
     IEnumerable<Tuple<string, T>> GetPropertiesOf<T>(object objectToExamine) where T : class {
       return objectToExamine.GetType()
-          .GetProperties(BindingFlags.Public | BindingFlags.Instance)
-          .Where(p => typeof(T).IsAssignableFrom(p.PropertyType))
+          .GetProperties(BindingFlags.Public | BindingFlags.Instance)          
           .Where(p => !p.GetIndexParameters().Any()) // no indexer properties
+          .Where(p => p.GetValue(objectToExamine) != null)
+          .Where(p => p.GetValue(objectToExamine) is T)
           .Select(p => new Tuple<string, T>(p.Name, p.GetValue(objectToExamine) as T))
           .Where(p => p.Item2 != null);
     }
